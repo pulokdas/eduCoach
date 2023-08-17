@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import LoginScreen from './Components/LoginScreen';
 import SignUpScreen from './Components/SignUpScreen';
 import LandingPage from './Components/LandingPage';
 import Home from './Components/Home';
 import Teachers_form from './Components/TeacherUI/Teachers_form'
+import Students_form from './Components/StudentUI/Students_form'
 import TeacherProfile from './Components/TeacherUI/Teacher_profile';
 import TeacherHomeScreen from './Components/TeacherUI/Teacher_Home'
 import ChatBox from './Components/Chatbox';
@@ -50,6 +51,7 @@ export default function App() {
         <Stack.Screen name="LandingStack" component={LandingStack} options={{ headerShown: false }} />
         <Stack.Screen name="Home" options={{ headerShown: false }} component={Home} />
         <Stack.Screen name='Teachers_form' component={Teachers_form} />
+        <Stack.Screen name='Students_form' component={Students_form} />
         <Stack.Screen name='Teacher_Home' component={TacherStack} options={{ headerShown: false }} />
         <Stack.Screen name='Student_home' component={StudentStack} options={{ headerShown: false }} />
         <Stack.Screen name='CreatePostScreen' component={CreatePostScreen} options={{ headerShown: false }} />

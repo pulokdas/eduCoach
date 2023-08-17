@@ -1,6 +1,6 @@
 import { EmailAuthProvider } from 'firebase/auth';
 import { db } from './firebase'; // Replace with your Firebase import
-import { doc, addDoc, collection, Timestamp } from 'firebase/firestore';
+import { doc, addDoc, collection, Timestamp, serverTimestamp } from 'firebase/firestore';
 // Function to add a new post
 export const addPost = async (content, author) => {
 
@@ -8,6 +8,7 @@ export const addPost = async (content, author) => {
 
     try {
         const newPostRef = await addDoc(postsCollectionRef, {
+
             content,
             author,
             timestamp: Timestamp.fromDate(new Date()), // Use server timestamp for consistent time
@@ -22,14 +23,36 @@ export const addPost = async (content, author) => {
 };
 
 // Function to add a new comment to a post
+// export const addCommentToPost = async (postId, text, author) => {
+//     const commentRef = db.collection('Posts').doc(postId).collection('Comments').doc();
+//     await commentRef.set({
+//         text,
+//         author,
+//         timestamp: new Date(),
+//     });
+// };
 export const addCommentToPost = async (postId, text, author) => {
-    const commentRef = db.collection('Posts').doc(postId).collection('Comments').doc();
-    await commentRef.set({
-        text,
-        author,
-        timestamp: new Date(),
-    });
+    try {
+        const commentsCollectionRef = collection(db, `Posts/${postId}/Comments`);
+
+        const newCommentRef = await addDoc(commentsCollectionRef, {
+            text,
+            author,
+            timestamp: serverTimestamp(), // Use server timestamp for consistent time
+        });
+
+        console.log('Comment added with ID:', newCommentRef.id);
+        return newCommentRef.id;
+    } catch (error) {
+        console.error('Error adding comment:', error);
+        throw error; // Rethrow the error to handle it further up the call stack
+    }
 };
+
+
+
+
+
 
 // Function to add a new like to a post
 export const addLikeToPost = async (postId, author) => {

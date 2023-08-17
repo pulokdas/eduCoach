@@ -11,6 +11,7 @@ import { doc, setDoc } from "firebase/firestore";
 
 
 
+
 export default function SignUpScreen() {
     useBackButton();
 

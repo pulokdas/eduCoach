@@ -37,42 +37,53 @@ export default function LoginScreen() {
 
     const handleSubmit = async () => {
         let isValid = true;
-    
+
         // Validate email format
         if (!email || !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(email)) {
             setEmailError('Please input a valid email');
             isValid = false;
         }
-    
+
         // Validate password
         if (!password || password.length < 6) {
             setPasswordError('Please input a valid password (at least 6 characters)');
             isValid = false;
         }
-    
+
         if (isValid) {
             try {
                 const userDocRef = doc(db, "Students", email);
                 const docSnapshot = await getDoc(userDocRef);
-    
+                const userDocRef1 = doc(db, "Teachers", email);
+                const docSnapshot1 = await getDoc(userDocRef1);
+
+                console.log(userDocRef.selectedRole + "  ===  " + userDocRef1.selectedRole + " " + email)
+
+
+
                 if (docSnapshot.exists()) {
                     const userData = docSnapshot.data();
                     if (userData.selectedRole === 'student') {
                         // Authenticate the user first
                         await signInWithEmailAndPassword(auth, email, password);
-    
                         // Then navigate based on the role
                         navigation.navigate('Student_home', { email: userData.email });
-                    } else if (userData.selectedRole === 'teacher') {
+                    } else {
+                        console.error('Role not recognized: student');
+                    }
+                } else if (docSnapshot1.exists()) {
+                    const userData1 = docSnapshot1.data();
+                    console.log(userData1, userData1.selectedRole);
+                    if (userData1.selectedRole === 'teacher') {
                         // Authenticate the user first
                         await signInWithEmailAndPassword(auth, email, password);
-    
                         // Then navigate based on the role
-                        navigation.navigate('Teacher_Home', { email: userData.email });
+                        navigation.navigate('Teacher_Home', { email: userData1.email });
                     } else {
-                        console.error('Role not recognized');
+                        console.error('Role not recognized: teacher');
                     }
-                } else {
+                }
+                else {
                     console.log("User data not found");
                 }
             } catch (error) {
@@ -80,8 +91,8 @@ export default function LoginScreen() {
             }
         }
     };
-    
-    
+
+
 
     return (
         <View style={tailwind`flex-1 items-center justify-center bg-[#3B3F46]`}>

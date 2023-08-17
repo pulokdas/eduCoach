@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, Button } from 'react-native';
 import tailwind from 'twrnc';
 import useBackButton from '../useBackButton';
 import { useNavigation } from '@react-navigation/native';
-import  {ImagePicker, launchImageLibrary} from 'react-native-image-picker';
-
 import { PermissionsAndroid } from 'react-native';
-import { db } from '../../firebase'; // Import the 'db' instance from your Firebase config file
+import { db, AUTH } from '../../firebase'; // Import the 'db' instance from your Firebase config file
 import { useRoute } from '@react-navigation/native';
 import { doc, updateDoc } from "firebase/firestore";
-
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import * as ImagePicker from 'expo-image-picker';
 
 export default function SignUpScreen() {
     useBackButton();
@@ -19,8 +18,10 @@ export default function SignUpScreen() {
     const [phone, setPhone] = useState('');
     const [institute, setInstitute] = useState('');
     const [topic, setTopic] = useState('');
+    const [experience, setExperience] = useState('');
     const route = useRoute();
     const { teacherEmail } = route.params;
+
     useEffect(() => {
         requestMediaPermission();
     }, []);
@@ -47,38 +48,86 @@ export default function SignUpScreen() {
         }
     }
 
-    const handleImagePick = () => {
-        ImagePicker.launchImageLibrary(
-            {
-                mediaType: 'photo',
-                quality: 1,
+ const handleImagePick = async () => {
+    try {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 1,
+        });
+        if (!result.cancelled) {
+            console.log(result.uri);
+            setSelectedImage(result.uri);
+        }
+    } catch (error) {
+        console.log(error);
+    }
+};
+
+const handleSubmit = async () => {
+    const teacherDocumentId = teacherEmail;
+
+    try {
+        if (!selectedImage) {
+            console.log('No image selected');
+            return;
+        }
+
+        const storage = getStorage();
+        const metadata = {
+            contentType: 'image/jpeg',
+        };
+
+        const response = await fetch(selectedImage);
+        const blob = await response.blob();
+
+        const storageRef = ref(storage, `teacher_profile_images/${teacherDocumentId}`);
+        const uploadTask = uploadBytesResumable(storageRef, blob, metadata);
+
+        uploadTask.on('state_changed',
+            (snapshot) => {
+                // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log('Upload is ' + progress + '% done');
+                // You can update a progress state here if needed
             },
-            (response) => {
-                if (response.didCancel) {
-                    console.log('User cancelled image picker');
-                } else if (response.error) {
-                    console.log('ImagePicker Error: ', response.error);
-                } else {
-                    setSelectedImage(response.uri);
+            (error) => {
+                console.error('Error uploading image:', error);
+            },
+            async () => {
+                // Upload completed successfully, now we can get the download URL
+                try {
+                    const imageUrl = await getDownloadURL(uploadTask.snapshot.ref);
+
+                    // Update Firestore document with the imageUrl
+                    const teacherRef = doc(db, 'Teachers', teacherDocumentId);
+                    await updateDoc(teacherRef, {
+                        name: name,
+                        phone: phone,
+                        institute: institute,
+                        topic: topic,
+                        experience: experience,
+                        profileImage: imageUrl,
+                    });
+
+                    console.log('Teacher data updated successfully');
+                    
+                    // Navigate to the desired screen
+                    navigation.navigate('Teacher_Home');
+                } catch (downloadUrlError) {
+                    console.error('Error getting download URL:', downloadUrlError);
                 }
             }
         );
-    };
+    } catch (error) {
+        console.error('Error updating teacher data:', error);
+    }
+};
 
-    const handleSubmit = () => {
-
-
-        const teacherDocumentId = teacherEmail;
-
-        updateDoc(doc(db, "Teachers", teacherDocumentId), {
-            name: name,
-            phone: phone,
-            institute: institute,
-            topic: topic,
-            profileImage: selectedImage,
-        })
-        navigation.navigate('Teacher_Home');
-    };
+    
+    
+    
 
     return (
         <View style={tailwind`flex-1 items-center justify-center bg-[#3B3F46]`}>
@@ -114,7 +163,6 @@ export default function SignUpScreen() {
                     placeholder="Phone"
                     value={phone}
                     onChangeText={setPhone}
-                    secureTextEntry
                 />
                 <TextInput
                     style={tailwind`w-full bg-[#292b2e] text-white rounded-md h-12 px-4 mb-4`}
@@ -122,7 +170,6 @@ export default function SignUpScreen() {
                     placeholder="Institute"
                     value={institute}
                     onChangeText={setInstitute}
-                    secureTextEntry
                 />
                 <TextInput
                     style={tailwind`w-full bg-[#292b2e] text-white rounded-md h-12 px-4 mb-4`}
@@ -130,7 +177,13 @@ export default function SignUpScreen() {
                     placeholder="Topic or Subject that you are specialized on"
                     value={topic}
                     onChangeText={setTopic}
-                    secureTextEntry
+                />
+                <TextInput
+                    style={tailwind`w-full bg-[#292b2e] text-white rounded-md h-12 px-4 mb-4`}
+                    placeholderTextColor="#696a6b"
+                    placeholder="Share your Teaching Experience in yrs"
+                    value={experience}
+                    onChangeText={setExperience}
                 />
                 <TouchableOpacity
                     onPress={handleSubmit}
